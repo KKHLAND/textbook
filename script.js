@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const subjectsHTML = allPossibleSubjects.map((subject, index) => `
             <tr class="${index % 2 !== 0 ? 'bg-gray-50' : ''}">
                 <td class="${cellPadding} text-center text-gray-800">${subject}</td>
-                <td class="${cellPadding} text-center text-gray-800 font-semibold ${checkmarkTextSize}">${student[subject] === '1' ? '✔' : ''}</td>
+                <td class="${cellPadding} text-center text-gray-800 font-semibold ${checkmarkTextSize}">${student[subject] ? '✔' : ''}</td>
                 <td class="${cellPadding}"></td>
             </tr>
         `).join('');
