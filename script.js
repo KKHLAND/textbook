@@ -304,14 +304,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const allPossibleSubjects = Object.keys(student).filter(h => h && h.trim() !== '' && !['학번', '이름'].includes(h.trim()));
         const totalSubjects = allPossibleSubjects.length;
 
-        let containerPadding, headerTextSize, studentInfoTextSize, tableTextSize, cellPadding, checkmarkTextSize, logoHeight, footerMargin;
+        // 모든 스타일 관련 변수를 여기에 선언합니다.
+        let containerPadding, headerTextSize, studentInfoTextSize, tableTextSize, cellPadding, checkmarkTextSize, logoHeight, footerMargin, headerMargin, studentInfoMargin;
 
         if (totalSubjects <= 22) {
-            containerPadding = 'p-8 sm:p-12'; headerTextSize = 'text-3xl sm:text-4xl'; studentInfoTextSize = 'text-xl sm:text-2xl'; tableTextSize = 'text-base'; cellPadding = 'py-3 px-2'; checkmarkTextSize = 'text-lg'; logoHeight = 'h-8'; footerMargin = 'mt-12';
+            // 기본 스타일
+            containerPadding = 'p-8 sm:p-12'; headerTextSize = 'text-3xl sm:text-4xl'; studentInfoTextSize = 'text-xl sm:text-2xl'; tableTextSize = 'text-base'; cellPadding = 'py-3 px-2'; checkmarkTextSize = 'text-lg'; logoHeight = 'h-8'; footerMargin = 'mt-12'; headerMargin = 'mb-12'; studentInfoMargin = 'mb-10';
         } else if (totalSubjects <= 30) {
-            containerPadding = 'p-6 sm:p-8'; headerTextSize = 'text-2xl sm:text-3xl'; studentInfoTextSize = 'text-lg sm:text-xl'; tableTextSize = 'text-sm'; cellPadding = 'py-1.5 px-2'; checkmarkTextSize = 'text-base'; logoHeight = 'h-7'; footerMargin = 'mt-6';
+            // 중간 스타일
+            containerPadding = 'p-6 sm:p-8'; headerTextSize = 'text-2xl sm:text-3xl'; studentInfoTextSize = 'text-lg sm:text-xl'; tableTextSize = 'text-sm'; cellPadding = 'py-1.5 px-2'; checkmarkTextSize = 'text-base'; logoHeight = 'h-7'; footerMargin = 'mt-6'; headerMargin = 'mb-10'; studentInfoMargin = 'mb-8';
         } else {
-            containerPadding = 'p-4 sm:p-6'; headerTextSize = 'text-2xl sm:text-3xl'; studentInfoTextSize = 'text-lg sm:text-xl'; tableTextSize = 'text-xs'; cellPadding = 'py-1 px-2'; checkmarkTextSize = 'text-sm'; logoHeight = 'h-6'; footerMargin = 'mt-4';
+            // 과목이 매우 많을 때 적용될 압축 스타일
+            containerPadding = 'p-6';
+            headerTextSize = 'text-2xl';
+            studentInfoTextSize = 'text-lg';
+            tableTextSize = 'text-xs';
+            cellPadding = 'py-0.5 px-1';
+            checkmarkTextSize = 'text-sm';
+            logoHeight = 'h-6';
+            footerMargin = 'mt-4';
+            headerMargin = 'mb-6';
+            studentInfoMargin = 'mb-6';
         }
 
         const subjectsHTML = allPossibleSubjects.map((subject, index) => `
@@ -328,10 +341,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return `
             <div class="confirmation-page mx-auto my-4 max-w-4xl bg-white ${containerPadding} border-2 border-gray-200 rounded-lg shadow-md font-[sans-serif]">
-                <header class="text-center mb-12">
+                <header class="text-center ${headerMargin}">
                     <h1 class="${headerTextSize} font-bold text-gray-800">${academicYear}학년도 ${grade} 교과서 신청 확인서</h1>
                 </header>
-                <div class="text-right mb-10">
+                <div class="text-right ${studentInfoMargin}">
                     <p class="${studentInfoTextSize} font-bold text-blue-800">${studentId} ${studentName}</p>
                 </div>
                 <div class="overflow-x-auto rounded-lg border border-gray-300 shadow-sm">
