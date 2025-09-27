@@ -27,6 +27,11 @@
               padding: 0 !important;
           }
         }
+        /* 숫자 입력 필드의 화살표 버튼을 항상 표시하도록 스타일 추가 */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -97,9 +102,7 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label for="academic-year-select" class="block text-sm font-medium text-gray-600 mb-2">학년도</label>
-                                <select id="academic-year-select" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition">
-                                    <option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option>
-                                </select>
+                                <input type="number" id="academic-year-select" value="2025" min="2020" max="2035" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition">
                             </div>
                             <div>
                                 <label for="grade-select" class="block text-sm font-medium text-gray-600 mb-2">학년</label>
