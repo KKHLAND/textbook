@@ -61,14 +61,14 @@
                             <p class="text-gray-500 mt-2">학생 데이터를 업로드하고 학적 정보를 설정하세요.</p>
                         </section>
                         <div id="file-upload-container" class="border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-300 flex flex-col items-center justify-center cursor-pointer border-gray-300 hover:border-blue-400 hover:bg-gray-50">
-                            <input type="file" id="file-input" class="hidden" accept=".csv">
+                            <input type="file" id="file-input" class="hidden" accept=".csv,.xlsx">
                             <div class="flex flex-col items-center justify-center space-y-2 text-gray-500">
                                 <svg class="w-12 h-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
                                 </svg>
-                                <p class="font-semibold">CSV 파일을 드래그 앤 드롭하세요</p>
+                                <p class="font-semibold">CSV 또는 Excel 파일을 드래그 앤 드롭하세요</p>
                                 <p class="text-sm">또는 클릭해서 파일을 선택하세요</p>
-                                <p class="text-xs text-red-500 mt-2">업로드할 파일은 CSV (UTF-8) 형식이어야 합니다.</p>
+                                <p class="text-xs text-red-500 mt-2">업로드할 파일은 CSV (UTF-8) 또는 Excel (.xlsx) 형식이어야 합니다.</p>
                             </div>
                             <div id="file-upload-status" class="mt-4 w-full max-w-sm border-t pt-4 space-y-2 hidden">
                                 <p class="text-sm font-semibold text-gray-600 mb-2">업로드된 파일:</p>
@@ -129,7 +129,7 @@
                                 </div>
                                 <div class="overflow-y-auto border border-t-0 rounded-b-md border-gray-200 bg-white h-96 flex flex-col">
                                     <ul id="student-list-ul" class="divide-y divide-gray-200 flex-grow"></ul>
-                                    <div id="student-list-placeholder" class="flex-grow flex items-center justify-center text-gray-500 text-center">CSV 파일을 업로드하면 학생 목록이 표시됩니다.</div>
+                                    <div id="student-list-placeholder" class="flex-grow flex items-center justify-center text-gray-500 text-center">파일을 업로드하면 학생 목록이 표시됩니다.</div>
                                 </div>
                            </div>
                         </div>
@@ -154,6 +154,7 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // State
@@ -210,7 +211,7 @@
                 );
 
                 if (students.length === 0) {
-                    studentListPlaceholder.textContent = 'CSV 파일을 업로드하면 학생 목록이 표시됩니다.';
+                    studentListPlaceholder.textContent = '파일을 업로드하면 학생 목록이 표시됩니다.';
                     studentListPlaceholder.classList.remove('hidden');
                 } else if (filteredStudents.length === 0) {
                     studentListPlaceholder.textContent = '검색된 학생이 없습니다.';
@@ -219,7 +220,7 @@
                     studentListPlaceholder.classList.add('hidden');
                     filteredStudents.forEach((student, index) => {
                         const li = document.createElement('li');
-                        li.className = `p-3 text-sm text-gray-800 cursor-pointer select-none transition-colors duration-100 ${selectedStudents.has(student['학번']) ? 'bg-gray-200 font-semibold' : 'hover:bg-gray-100'}`;
+                        li.className = `p-3 text-sm text-gray-800 cursor-pointer select-none transition-colors duration-100 ${selectedStudents.has(student['학번']) ? 'bg-green-200 font-semibold text-green-900' : 'hover:bg-gray-100'}`;
                         li.textContent = `${student['학번']} ${student['이름']}`;
                         li.dataset.id = student['학번'];
                         li.dataset.originalIndex = students.findIndex(s => s['학번'] === student['학번']);
@@ -378,14 +379,85 @@
 
             // --- Core Logic ---
             const handleFile = (file) => {
-                if (file.name.split('.').pop()?.toLowerCase() !== 'csv') {
-                    alert('CSV 파일만 업로드할 수 있습니다.');
+                const extension = file.name.split('.').pop()?.toLowerCase();
+                
+                if (extension === 'csv') {
+                    csvFile = file;
+                    csvFileName.textContent = file.name;
+                    fileUploadStatus.classList.remove('hidden');
+                    parseCsv(file);
+                } else if (extension === 'xlsx') {
+                    csvFile = file;
+                    csvFileName.textContent = file.name;
+                    fileUploadStatus.classList.remove('hidden');
+                    parseExcel(file);
+                } else {
+                    alert('CSV 또는 Excel 파일만 업로드할 수 있습니다.');
                     return;
                 }
-                csvFile = file;
-                csvFileName.textContent = file.name;
-                fileUploadStatus.classList.remove('hidden');
-                parseCsv(file);
+            };
+
+            const parseExcel = (file) => {
+                studentListPlaceholder.textContent = 'Excel 파일을 파싱 중입니다...';
+                hideError();
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = e.target.result;
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        
+                        // Convert sheet to JSON
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        
+                        if (jsonData.length === 0) {
+                            throw new Error('Excel 파일에 데이터가 없습니다.');
+                        }
+
+                        // First row is header
+                        const headers = jsonData[0];
+                        if (!headers.includes('학번') || !headers.includes('이름')) {
+                            throw new Error("Excel 파일에 '학번'과 '이름' 열이 없습니다.");
+                        }
+
+                        // Convert to array of objects with all values as strings
+                        const results = [];
+                        for (let i = 1; i < jsonData.length; i++) {
+                            const row = jsonData[i];
+                            const obj = {};
+                            headers.forEach((header, index) => {
+                                // Convert all values to string to match CSV behavior
+                                const value = row[index];
+                                obj[header] = value === null || value === undefined ? '' : String(value).trim();
+                            });
+                            results.push(obj);
+                        }
+
+                        students = results.filter(s => s['학번'] && s['이름']);
+                        
+                        if (students.length === 0) {
+                            throw new Error("파일에서 유효한 학생 데이터를 찾을 수 없습니다.");
+                        }
+
+                        selectedStudents.clear();
+                        updateStudentList();
+                    } catch (err) {
+                        students = [];
+                        selectedStudents.clear();
+                        updateStudentList();
+                        showError(err.message);
+                    }
+                };
+
+                reader.onerror = () => {
+                    showError('파일을 읽을 수 없습니다.');
+                    students = [];
+                    selectedStudents.clear();
+                    updateStudentList();
+                };
+
+                reader.readAsArrayBuffer(file);
             };
 
             const parseCsv = (file) => {
@@ -462,33 +534,34 @@
                 const totalSubjects = allPossibleSubjects.length;
 
                 // 모든 스타일 관련 변수를 여기에 선언합니다.
-                let containerPadding, headerTextSize, studentInfoTextSize, tableTextSize, cellPadding, checkmarkTextSize, logoHeight, footerMargin, headerMargin, studentInfoMargin;
+                let containerPadding, headerTextSize, studentInfoTextSize, tableTextSize, cellPaddingClass, cellPaddingStyle, checkmarkTextSize, logoHeight, footerMargin, headerMargin, studentInfoMargin;
 
                 if (totalSubjects <= 22) {
                     // 기본 스타일
-                    containerPadding = 'p-8 sm:p-12'; headerTextSize = 'text-3xl sm:text-4xl'; studentInfoTextSize = 'text-xl sm:text-2xl'; tableTextSize = 'text-base'; cellPadding = 'py-3 px-2'; checkmarkTextSize = 'text-lg'; logoHeight = 'h-8'; footerMargin = 'mt-12'; headerMargin = 'mb-12'; studentInfoMargin = 'mb-10';
+                    containerPadding = 'p-8 sm:p-12'; headerTextSize = 'text-3xl sm:text-4xl'; studentInfoTextSize = 'text-xl sm:text-2xl'; tableTextSize = 'text-base'; cellPaddingClass = 'px-2'; cellPaddingStyle = 'padding-top: 0.95rem; padding-bottom: 0.95rem;'; checkmarkTextSize = 'text-lg'; logoHeight = 'h-8'; footerMargin = 'mt-12'; headerMargin = 'mb-12'; studentInfoMargin = 'mb-10';
                 } else if (totalSubjects <= 30) {
                     // 중간 스타일
-                    containerPadding = 'p-6 sm:p-8'; headerTextSize = 'text-2xl sm:text-3xl'; studentInfoTextSize = 'text-lg sm:text-xl'; tableTextSize = 'text-sm'; cellPadding = 'py-1.5 px-2'; checkmarkTextSize = 'text-base'; logoHeight = 'h-7'; footerMargin = 'mt-6'; headerMargin = 'mb-10'; studentInfoMargin = 'mb-8';
+                    containerPadding = 'p-6 sm:p-8'; headerTextSize = 'text-2xl sm:text-3xl'; studentInfoTextSize = 'text-lg sm:text-xl'; tableTextSize = 'text-sm'; cellPaddingClass = 'px-2'; cellPaddingStyle = 'padding-top: 0.5rem; padding-bottom: 0.5rem;'; checkmarkTextSize = 'text-base'; logoHeight = 'h-7'; footerMargin = 'mt-6'; headerMargin = 'mb-10'; studentInfoMargin = 'mb-8';
                 } else {
                     // 과목이 매우 많을 때 적용될 압축 스타일
-                    containerPadding = 'p-6';
+                    containerPadding = 'p-4';
                     headerTextSize = 'text-2xl';
                     studentInfoTextSize = 'text-lg';
                     tableTextSize = 'text-xs';
-                    cellPadding = 'py-0.5 px-1';
+                    cellPaddingClass = 'px-1';
+                    cellPaddingStyle = 'padding-top: 0.45rem; padding-bottom: 0.45rem;';
                     checkmarkTextSize = 'text-sm';
                     logoHeight = 'h-6';
-                    footerMargin = 'mt-4';
-                    headerMargin = 'mb-6';
-                    studentInfoMargin = 'mb-6';
+                    footerMargin = 'mt-1';
+                    headerMargin = 'mb-4';
+                    studentInfoMargin = 'mb-2';
                 }
 
                 const subjectsHTML = allPossibleSubjects.map((subject, index) => `
                     <tr class="${index % 2 !== 0 ? 'bg-gray-50' : ''}">
-                        <td class="${cellPadding} text-center text-gray-800">${subject}</td>
-                        <td class="${cellPadding} text-center text-gray-800 font-semibold ${checkmarkTextSize}">${student[subject] ? '✔' : ''}</td>
-                        <td class="${cellPadding}"></td>
+                        <td class="text-center text-gray-800 ${cellPaddingClass}" style="${cellPaddingStyle}">${subject}</td>
+                        <td class="text-center text-gray-800 font-semibold ${checkmarkTextSize} ${cellPaddingClass}" style="${cellPaddingStyle}">${student[subject] ? '✔' : ''}</td>
+                        <td class="${cellPaddingClass}" style="${cellPaddingStyle}"></td>
                     </tr>
                 `).join('');
 
@@ -508,9 +581,9 @@
                             <table class="w-full ${tableTextSize} table-fixed">
                                 <thead class="bg-blue-100">
                                     <tr>
-                                        <th class="${cellPadding} w-1/2 text-center font-semibold text-gray-700 tracking-wider">선택과목</th>
-                                        <th class="${cellPadding} w-40 text-center font-semibold text-gray-700 tracking-wider">신청</th>
-                                        <th class="${cellPadding} text-center font-semibold text-gray-700 tracking-wider">비고</th>
+                                        <th class="w-1/2 text-center font-semibold text-gray-700 tracking-wider ${cellPaddingClass}" style="${cellPaddingStyle}">선택과목</th>
+                                        <th class="w-40 text-center font-semibold text-gray-700 tracking-wider ${cellPaddingClass}" style="${cellPaddingStyle}">신청</th>
+                                        <th class="text-center font-semibold text-gray-700 tracking-wider ${cellPaddingClass}" style="${cellPaddingStyle}">비고</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200 bg-white">${subjectsHTML}</tbody>
