@@ -539,9 +539,23 @@
                 if (totalSubjects <= 22) {
                     // 기본 스타일
                     containerPadding = 'p-8 sm:p-12'; headerTextSize = 'text-3xl sm:text-4xl'; studentInfoTextSize = 'text-xl sm:text-2xl'; tableTextSize = 'text-base'; cellPaddingClass = 'px-2'; cellPaddingStyle = 'padding-top: 0.95rem; padding-bottom: 0.95rem;'; checkmarkTextSize = 'text-lg'; logoHeight = 'h-8'; footerMargin = 'mt-12'; headerMargin = 'mb-12'; studentInfoMargin = 'mb-10';
+                    if (totalSubjects <= 22) {
+                    // 기본 스타일 -> 압축 스타일로 변경
+                    containerPadding = 'p-4';
+                    headerTextSize = 'text-3xl';
+                    studentInfoTextSize = 'text-2xl';
+                    tableTextSize = 'text-base';
+                    cellPaddingClass = 'px-1';
+                    cellPaddingStyle = 'padding-top: 0.85rem; padding-bottom: 0.85rem;'; // 셀 여백을 줄임
+                    checkmarkTextSize = 'text-base';
+                    logoHeight = 'h-6';
+                    footerMargin = 'mt-1'; // 상하 여백을 줄임
+                    headerMargin = 'mb-4'; // 상하 여백을 줄임
+                    studentInfoMargin = 'mb-2'; // 상하 여백을 줄임
+                }
                 } else if (totalSubjects <= 30) {
                     // 중간 스타일
-                    containerPadding = 'p-6 sm:p-8'; headerTextSize = 'text-2xl sm:text-3xl'; studentInfoTextSize = 'text-lg sm:text-xl'; tableTextSize = 'text-sm'; cellPaddingClass = 'px-2'; cellPaddingStyle = 'padding-top: 0.5rem; padding-bottom: 0.5rem;'; checkmarkTextSize = 'text-base'; logoHeight = 'h-7'; footerMargin = 'mt-6'; headerMargin = 'mb-10'; studentInfoMargin = 'mb-8';
+                    containerPadding = 'p-6 sm:p-8'; headerTextSize = 'text-2xl sm:text-3xl'; studentInfoTextSize = 'text-lg sm:text-xl'; tableTextSize = 'text-sm'; cellPaddingClass = 'px-2'; cellPaddingStyle = 'padding-top: 0.24rem; padding-bottom: 0.24rem;'; checkmarkTextSize = 'text-base'; logoHeight = 'h-7'; footerMargin = 'mt-6'; headerMargin = 'mb-10'; studentInfoMargin = 'mb-8';
                 } else {
                     // 과목이 매우 많을 때 적용될 압축 스타일
                     containerPadding = 'p-4';
@@ -608,4 +622,3 @@
     </script>
 </body>
 </html>
-
