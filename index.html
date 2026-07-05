@@ -5,225 +5,489 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>교과서 신청 확인서 생성기</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Pretendard Variable', 'Pretendard', 'system-ui', 'sans-serif'] }
+                }
+            }
+        };
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
     <style>
-        @media print {
-          body {
+        /* ===== 확인서(A4) 스타일 ===== */
+        .confirmation-page {
+            width: 210mm;
+            height: 297mm;
+            box-sizing: border-box;
+            padding: 13mm 15mm 12mm;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-family: 'Pretendard Variable', 'Pretendard', system-ui, sans-serif;
+            color: #1e293b;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-          }
-          #print-controls, #main-app {
-            display: none !important;
-          }
-          .confirmation-page {
-            page-break-after: always;
-            box-shadow: none !important;
-            border: none !important;
-            margin: 0 !important;
-          }
-          #print-preview-container {
-            display: block !important;
-          }
-          #print-preview-content {
-              padding: 0 !important;
-          }
         }
-        /* 숫자 입력 필드의 화살표 버튼을 항상 표시하도록 스타일 추가 */
+        .cp-accent {
+            height: 1.6mm;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #2563eb, #4f46e5 55%, #93c5fd);
+            margin-bottom: 7mm;
+            flex: none;
+        }
+        .cp-header { display: flex; justify-content: space-between; align-items: flex-end; flex: none; }
+        .cp-title { font-size: 21pt; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
+        .cp-subtitle { font-size: 11pt; color: #2563eb; font-weight: 700; margin-bottom: 1.5mm; letter-spacing: 0.02em; }
+        .cp-student { text-align: right; }
+        .cp-student-name { font-size: 16pt; font-weight: 800; letter-spacing: -0.01em; }
+        .cp-student-id { font-size: 10.5pt; color: #64748b; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .cp-infobar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin: 5mm 0 3.5mm; flex: none;
+            font-size: 9.5pt; color: #64748b;
+        }
+        .cp-chip {
+            display: inline-block; background: #eff6ff; color: #1d4ed8;
+            border: 0.35mm solid #bfdbfe; border-radius: 999px;
+            padding: 0.8mm 3.5mm; font-weight: 700; font-size: 9.5pt;
+        }
+        .cp-tablewrap { flex: 1 1 auto; min-height: 0; }
+        .cp-table {
+            width: 100%; height: 100%;
+            border-collapse: collapse; table-layout: fixed;
+        }
+        .cp-table th {
+            background: #1e293b; color: #fff; font-weight: 700;
+            padding: 2mm 1mm; text-align: center;
+            border: 0.3mm solid #1e293b;
+            white-space: nowrap;
+        }
+        .cp-table td {
+            border: 0.3mm solid #cbd5e1;
+            padding: 0.5mm 3mm; text-align: center; vertical-align: middle;
+            line-height: 1.25;
+        }
+        .cp-table tr.enrolled td { background: #eff6ff; font-weight: 700; color: #1e3a8a; }
+        .cp-table td.subject { text-align: left; padding-left: 5mm; }
+        .cp-table td.num { color: #94a3b8; font-variant-numeric: tabular-nums; }
+        .cp-table tr.enrolled td.num { color: #60a5fa; }
+        .cp-check { color: #2563eb; font-weight: 800; }
+        .cp-footer { flex: none; margin-top: 6mm; }
+        .cp-confirm-text { text-align: center; font-size: 11pt; font-weight: 600; color: #334155; }
+        .cp-date { text-align: center; font-size: 10.5pt; color: #475569; margin-top: 4mm; letter-spacing: 0.06em; }
+        .cp-sign { text-align: right; font-size: 10.5pt; color: #334155; margin-top: 4mm; padding-right: 8mm; }
+        .cp-school {
+            display: flex; align-items: center; justify-content: center; gap: 1.5mm;
+            margin-top: 5mm; padding-top: 4mm; border-top: 0.4mm solid #e2e8f0;
+        }
+        .cp-school-name { font-size: 15pt; font-weight: 800; letter-spacing: 0.12em; text-indent: 0.12em; }
+        .cp-school img, .cp-school svg { height: 11.7mm; width: auto; object-fit: contain; }
+
+        /* 화면 미리보기 */
+        @media screen {
+            .confirmation-page {
+                margin: 20px auto;
+                box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.25);
+                border-radius: 4px;
+            }
+        }
+        /* 인쇄 */
+        @page { size: A4; margin: 0; }
+        @media print {
+            html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            #print-controls, #main-app { display: none !important; }
+            #print-preview-container { display: block !important; }
+            #print-preview-content { padding: 0 !important; }
+            .confirmation-page {
+                margin: 0 !important; box-shadow: none !important; border-radius: 0 !important;
+                break-after: page; page-break-after: always;
+            }
+            .confirmation-page:last-child { break-after: auto; page-break-after: auto; }
+        }
         input[type=number]::-webkit-inner-spin-button,
-        input[type=number]::-webkit-outer-spin-button {
-            opacity: 1;
-        }
+        input[type=number]::-webkit-outer-spin-button { opacity: 1; }
+        .student-item.selected { background: #eff6ff; }
+        .student-item.selected .check-box { background: #2563eb; border-color: #2563eb; }
+        .student-item.selected .check-box svg { display: block; }
     </style>
 </head>
-<body class="bg-gray-100">
-    <div id="print-preview-container" class="hidden">
-        <header id="print-controls" class="bg-white p-4 shadow-md sticky top-0 z-10 flex justify-center items-center space-x-4">
-            <button id="back-to-main-btn" class="px-6 py-2 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition">
-                돌아가기
+<body class="bg-slate-100">
+
+    <!-- ===== 인쇄 미리보기 ===== -->
+    <div id="print-preview-container" class="hidden bg-slate-200 min-h-screen">
+        <header id="print-controls" class="bg-white/90 backdrop-blur px-4 py-3 shadow-sm sticky top-0 z-10 flex justify-center items-center gap-3">
+            <button id="back-to-main-btn" class="px-5 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-100 transition">
+                ← 돌아가기
             </button>
-            <button id="print-btn" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition text-center">
-                인쇄하기
+            <span id="preview-info" class="text-sm text-slate-500 font-medium hidden sm:inline"></span>
+            <button id="print-btn" class="px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-md shadow-blue-600/30 transition">
+                🖨 인쇄하기
             </button>
         </header>
-        <main id="print-preview-content" class="p-2 sm:p-4"></main>
+        <main id="print-preview-content" class="py-2 overflow-x-auto"></main>
     </div>
 
-    <div id="main-app" class="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8">
-        <div class="w-full max-w-6xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col" style="min-height: 90vh;">
-            <header class="bg-blue-600 border-b border-blue-700 p-6 sm:p-8">
-                <h1 class="text-3xl font-bold text-white">교과서 신청 확인서 생성기</h1>
-                <p class="text-blue-200 mt-1">Textbook Application Confirmation Generator</p>
-            </header>
-            <main class="flex-grow p-6 sm:p-10 space-y-10">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 md:items-start">
-                    <div class="space-y-6">
-                        <section>
-                            <h2 class="text-2xl font-bold text-gray-700">1. 설정</h2>
-                            <p class="text-gray-500 mt-2">학생 데이터를 업로드하고 학적 정보를 설정하세요.</p>
-                        </section>
-                        <div id="file-upload-container" class="border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-300 flex flex-col items-center justify-center cursor-pointer border-gray-300 hover:border-blue-400 hover:bg-gray-50">
-                            <input type="file" id="file-input" class="hidden" accept=".csv,.xlsx">
-                            <div class="flex flex-col items-center justify-center space-y-2 text-gray-500">
-                                <svg class="w-12 h-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                </svg>
-                                <p class="font-semibold">CSV 또는 Excel 파일을 드래그 앤 드롭하세요</p>
-                                <p class="text-sm">또는 클릭해서 파일을 선택하세요</p>
-                                <p class="text-xs text-red-500 mt-2">업로드할 파일은 CSV (UTF-8) 또는 Excel (.xlsx) 형식이어야 합니다.</p>
-                            </div>
-                            <div id="file-upload-status" class="mt-4 w-full max-w-sm border-t pt-4 space-y-2 hidden">
-                                <p class="text-sm font-semibold text-gray-600 mb-2">업로드된 파일:</p>
-                                <div id="csv-file-info" class="flex items-center justify-between bg-gray-100 p-2 rounded-md text-left">
-                                    <div class="overflow-hidden">
-                                        <p class="text-xs text-gray-500">학생 데이터</p>
-                                        <p id="csv-file-name" class="truncate text-sm font-medium text-gray-800"></p>
-                                    </div>
-                                    <button id="remove-csv-btn" class="flex-shrink-0 ml-2 text-red-500 hover:text-red-700 text-xs font-bold">삭제</button>
-                                </div>
-                            </div>
+    <!-- ===== 메인 앱 ===== -->
+    <div id="main-app" class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+        <div class="w-full max-w-6xl mx-auto">
+            <div class="bg-white rounded-3xl shadow-xl shadow-slate-300/40 overflow-hidden ring-1 ring-slate-200">
+                <header class="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 px-6 sm:px-10 py-8">
+                    <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 20% 120%, #fff 0, transparent 40%), radial-gradient(circle at 90% -20%, #fff 0, transparent 35%);"></div>
+                    <div class="relative">
+                        <div class="inline-flex items-center gap-2 bg-white/15 text-blue-50 text-xs font-semibold px-3 py-1 rounded-full mb-3 backdrop-blur">
+                            📚 Textbook Confirmation Generator
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600 mb-2">학교 로고 (선택 사항)</label>
-                            <div class="mt-1 flex items-center space-x-4 p-4 border-2 border-dashed border-gray-300 rounded-lg">
-                                <div class="flex-shrink-0 h-20 w-20 flex items-center justify-center bg-gray-100 rounded-md" id="logo-preview-container">
-                                    <svg class="h-20 w-20" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="Default School Logo" role="img"><g><path d="M50 5 L10 20 V60 C10 85, 50 95, 50 95 C50 95, 90 85, 90 60 V20 L50 5 Z" fill="#F0F4F8" stroke="#4A5568" stroke-width="3"></path><path d="M35 65 C 50 50, 65 50, 65 65 L 65 35 C 50 45, 35 45, 35 35 Z M 50 42 V 68" fill="none" stroke="#2D3748" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path></g></svg>
-                                </div>
-                                <div id="logo-upload-control">
-                                    <label for="logo-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
-                                        <span>파일 업로드</span>
-                                        <input id="logo-upload" name="logo-upload" type="file" class="sr-only" accept="image/png, image/jpeg, image/svg+xml">
-                                    </label>
-                                    <p class="text-xs text-gray-500">PNG, JPG, SVG (1MB 이하)</p>
-                                </div>
-                                <div id="logo-remove-control" class="hidden">
-                                     <p class="text-sm text-gray-500">로고가 업로드되었습니다.</p>
-                                     <button type="button" id="remove-logo-btn" class="text-sm font-semibold text-red-600 hover:text-red-800">로고 삭제</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label for="academic-year-select" class="block text-sm font-medium text-gray-600 mb-2">학년도</label>
-                                <input type="number" id="academic-year-select" value="2025" min="2020" max="2035" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition">
-                            </div>
-                            <div>
-                                <label for="grade-select" class="block text-sm font-medium text-gray-600 mb-2">학년</label>
-                                <select id="grade-select" class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition">
-                                    <option>2학년</option><option>3학년</option>
-                                </select>
-                            </div>
-                        </div>
+                        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">교과서 신청 확인서 생성기</h1>
+                        <p class="text-blue-100/90 mt-1.5 text-sm sm:text-base">수강신청 배정 결과 파일(원본 그대로)을 업로드하면 학생별 확인서를 A4 한 장씩 만들어 드립니다.</p>
                     </div>
-                    <div class="flex flex-col h-full">
-                        <h2 class="text-2xl font-bold text-gray-700 mb-4">2. 학생 선택</h2>
-                        <div class="bg-gray-50 p-4 rounded-lg border flex-grow flex flex-col min-h-[280px]">
-                           <div id="student-list-container" class="w-full h-full flex flex-col">
-                                <div class="flex-shrink-0 p-3 bg-gray-100 rounded-t-md border-b border-gray-200 space-y-3">
-                                    <input type="text" id="search-input" placeholder="이름 또는 학번으로 검색..." class="w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-lg p-2 transition">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <input type="checkbox" id="select-all-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
-                                            <label for="select-all-checkbox" class="ml-2 font-medium text-gray-700 text-sm">보이는 학생 전체 선택</label>
+                </header>
+
+                <main class="p-6 sm:p-10">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+                        <!-- 좌측: 설정 -->
+                        <div class="space-y-6">
+                            <section class="flex items-center gap-3">
+                                <span class="flex-none w-8 h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-md shadow-blue-600/30">1</span>
+                                <div>
+                                    <h2 class="text-lg font-bold text-slate-800">파일 업로드 및 설정</h2>
+                                    <p class="text-sm text-slate-500">배정내역 엑셀 원본을 그대로 올려도 됩니다.</p>
+                                </div>
+                            </section>
+
+                            <div id="file-upload-container" class="group border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 flex flex-col items-center justify-center cursor-pointer border-slate-300 hover:border-blue-400 hover:bg-blue-50/40">
+                                <input type="file" id="file-input" class="hidden" accept=".csv,.xlsx">
+                                <div class="flex flex-col items-center justify-center space-y-2 text-slate-500">
+                                    <div class="w-14 h-14 rounded-2xl bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                                        <svg class="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                                        </svg>
+                                    </div>
+                                    <p class="font-semibold text-slate-700">Excel(.xlsx) 또는 CSV 파일을 드래그 앤 드롭</p>
+                                    <p class="text-sm">또는 클릭해서 파일을 선택하세요</p>
+                                    <p class="text-xs text-slate-400 mt-1">「2026 2학기 선택과목(2학년).xlsx」같은 배정 원본 파일을 편집 없이 바로 사용할 수 있습니다.</p>
+                                </div>
+                                <div id="file-upload-status" class="mt-5 w-full max-w-sm border-t border-slate-200 pt-4 hidden">
+                                    <div class="flex items-center justify-between bg-slate-50 ring-1 ring-slate-200 p-3 rounded-xl text-left">
+                                        <div class="flex items-center gap-3 overflow-hidden">
+                                            <span class="flex-none w-9 h-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            </span>
+                                            <div class="overflow-hidden">
+                                                <p id="csv-file-name" class="truncate text-sm font-semibold text-slate-800"></p>
+                                                <p id="file-summary" class="text-xs text-slate-500"></p>
+                                            </div>
                                         </div>
-                                        <div id="selection-count" class="text-sm text-gray-600">0 / 0 선택됨</div>
+                                        <button id="remove-csv-btn" class="flex-shrink-0 ml-3 text-slate-400 hover:text-red-500 transition" title="파일 삭제">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="overflow-y-auto border border-t-0 rounded-b-md border-gray-200 bg-white h-96 flex flex-col">
-                                    <ul id="student-list-ul" class="divide-y divide-gray-200 flex-grow"></ul>
-                                    <div id="student-list-placeholder" class="flex-grow flex items-center justify-center text-gray-500 text-center">파일을 업로드하면 학생 목록이 표시됩니다.</div>
+                            </div>
+
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div class="col-span-2 sm:col-span-1">
+                                    <label for="academic-year-select" class="block text-xs font-semibold text-slate-500 mb-1.5">학년도</label>
+                                    <input type="number" id="academic-year-select" min="2020" max="2040" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition">
                                 </div>
-                           </div>
+                                <div>
+                                    <label for="semester-select" class="block text-xs font-semibold text-slate-500 mb-1.5">학기</label>
+                                    <select id="semester-select" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition">
+                                        <option>1학기</option><option>2학기</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="grade-select" class="block text-xs font-semibold text-slate-500 mb-1.5">학년</label>
+                                    <select id="grade-select" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition">
+                                        <option>1학년</option><option selected>2학년</option><option>3학년</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-2 sm:col-span-1">
+                                    <label for="school-name-input" class="block text-xs font-semibold text-slate-500 mb-1.5">학교명</label>
+                                    <input type="text" id="school-name-input" value="원묵고등학교" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 transition">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">학교 로고 (선택 사항)</label>
+                                <div class="flex items-center gap-4 p-4 border border-slate-200 rounded-2xl bg-slate-50/60">
+                                    <div class="flex-shrink-0 h-16 w-16 flex items-center justify-center bg-white ring-1 ring-slate-200 rounded-xl overflow-hidden" id="logo-preview-container"></div>
+                                    <div id="logo-upload-control">
+                                        <label for="logo-upload" class="inline-flex items-center gap-1.5 cursor-pointer text-sm font-semibold text-blue-600 hover:text-blue-700">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                                            <span>로고 파일 업로드</span>
+                                            <input id="logo-upload" name="logo-upload" type="file" class="sr-only" accept="image/png, image/jpeg, image/svg+xml">
+                                        </label>
+                                        <p class="text-xs text-slate-400 mt-1">PNG, JPG, SVG · 1MB 이하 · 미지정 시 기본 로고 사용</p>
+                                    </div>
+                                    <div id="logo-remove-control" class="hidden">
+                                        <p class="text-sm text-slate-600 font-medium">로고가 업로드되었습니다.</p>
+                                        <button type="button" id="remove-logo-btn" class="text-sm font-semibold text-red-500 hover:text-red-700">로고 삭제</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 우측: 학생 선택 -->
+                        <div class="flex flex-col">
+                            <section class="flex items-center gap-3 mb-5">
+                                <span class="flex-none w-8 h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-md shadow-blue-600/30">2</span>
+                                <div>
+                                    <h2 class="text-lg font-bold text-slate-800">학생 선택</h2>
+                                    <p class="text-sm text-slate-500">클릭으로 선택/해제, Shift+클릭으로 범위 선택</p>
+                                </div>
+                            </section>
+                            <div class="rounded-2xl ring-1 ring-slate-200 overflow-hidden flex flex-col bg-white">
+                                <div class="flex-shrink-0 p-3 bg-slate-50 border-b border-slate-200 space-y-2.5">
+                                    <div class="flex gap-2">
+                                        <div class="relative flex-1">
+                                            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
+                                            <input type="text" id="search-input" placeholder="이름 또는 학번 검색" class="w-full bg-white border border-slate-300 text-slate-900 text-sm rounded-xl py-2 pl-9 pr-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                                        </div>
+                                        <select id="class-filter" class="flex-none bg-white border border-slate-300 text-slate-700 text-sm rounded-xl px-2.5 py-2 focus:ring-2 focus:ring-blue-500 transition">
+                                            <option value="">전체 반</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                                            <input type="checkbox" id="select-all-checkbox" class="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
+                                            <span class="font-medium text-slate-700 text-sm">보이는 학생 전체 선택</span>
+                                        </label>
+                                        <span id="selection-count" class="text-xs font-semibold text-blue-700 bg-blue-50 ring-1 ring-blue-100 px-2.5 py-1 rounded-full">0 / 0 선택됨</span>
+                                    </div>
+                                </div>
+                                <div class="overflow-y-auto bg-white h-[26rem] flex flex-col">
+                                    <ul id="student-list-ul" class="divide-y divide-slate-100 flex-grow"></ul>
+                                    <div id="student-list-placeholder" class="flex-grow flex flex-col items-center justify-center text-slate-400 text-center gap-2 p-6">
+                                        <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+                                        <span class="text-sm">파일을 업로드하면 학생 목록이 표시됩니다.</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <section class="pt-8 border-t border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-700 mb-4">3. 생성 및 인쇄</h2>
-                    <div class="space-y-6">
-                        <button id="generate-btn" disabled class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105">
+
+                    <!-- 하단: 생성 -->
+                    <section class="mt-10 pt-8 border-t border-slate-200">
+                        <div class="flex items-center gap-3 mb-5">
+                            <span class="flex-none w-8 h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm shadow-md shadow-blue-600/30">3</span>
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-800">확인서 생성 및 인쇄</h2>
+                                <p class="text-sm text-slate-500">학생 1명당 A4 한 페이지로 출력됩니다.</p>
+                            </div>
+                        </div>
+                        <button id="generate-btn" disabled class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 px-4 rounded-2xl hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed disabled:shadow-none shadow-lg shadow-blue-600/25 transition-all duration-300">
                             <span id="generate-btn-text">학생을 선택하세요</span>
                         </button>
-                        <div id="error-message-container" class="text-center bg-red-50 p-4 rounded-lg hidden">
-                            <p class="text-red-600 font-semibold">오류가 발생했습니다:</p>
+                        <div id="error-message-container" class="mt-4 text-center bg-red-50 ring-1 ring-red-100 p-4 rounded-2xl hidden">
+                            <p class="text-red-600 font-semibold text-sm">오류가 발생했습니다</p>
                             <p id="error-message" class="text-red-500 text-sm mt-1 whitespace-pre-wrap"></p>
                         </div>
-                    </div>
-                </section>
-            </main>
-            <footer class="text-center text-sm text-gray-500 py-4 bg-gray-50 border-t mt-auto">
-                <p>&copy; <span id="current-year"></span> Wonmook High School. All Rights Reserved.</p>
-            </footer>
+                    </section>
+                </main>
+
+                <footer class="text-center text-xs text-slate-400 py-4 bg-slate-50 border-t border-slate-100">
+                    <p>&copy; <span id="current-year"></span> Wonmook High School. All Rights Reserved.</p>
+                </footer>
+            </div>
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // State
-            let students = [];
+            // ===== 상태 =====
+            let students = [];        // { id, name, cls, subjects: {과목명: 값}, count }
+            let subjectNames = [];    // 과목 열 순서
             let selectedStudents = new Set();
             let logoSrc = null;
-            let csvFile = null;
             let lastSelectedIndex = null;
 
-            // Element References
-            const mainApp = document.getElementById('main-app');
-            const printPreviewContainer = document.getElementById('print-preview-container');
-            const printPreviewContent = document.getElementById('print-preview-content');
-            
-            const fileUploadContainer = document.getElementById('file-upload-container');
-            const fileInput = document.getElementById('file-input');
-            const fileUploadStatus = document.getElementById('file-upload-status');
-            const csvFileName = document.getElementById('csv-file-name');
-            const removeCsvBtn = document.getElementById('remove-csv-btn');
-            
-            const logoUpload = document.getElementById('logo-upload');
-            const logoPreviewContainer = document.getElementById('logo-preview-container');
-            const logoUploadControl = document.getElementById('logo-upload-control');
-            const logoRemoveControl = document.getElementById('logo-remove-control');
-            const removeLogoBtn = document.getElementById('remove-logo-btn');
-            
-            const studentListUl = document.getElementById('student-list-ul');
-            const studentListPlaceholder = document.getElementById('student-list-placeholder');
-            const searchInput = document.getElementById('search-input');
-            const selectAllCheckbox = document.getElementById('select-all-checkbox');
-            const selectionCount = document.getElementById('selection-count');
-            
-            const generateBtn = document.getElementById('generate-btn');
-            const generateBtnText = document.getElementById('generate-btn-text');
-            const backToMainBtn = document.getElementById('back-to-main-btn');
-            const printBtn = document.getElementById('print-btn');
-            
-            const academicYearSelect = document.getElementById('academic-year-select');
-            const gradeSelect = document.getElementById('grade-select');
-            
-            const errorContainer = document.getElementById('error-message-container');
-            const errorMessage = document.getElementById('error-message');
-            
-            document.getElementById('current-year').textContent = new Date().getFullYear();
+            const DEFAULT_LOGO_SVG = `<svg class="h-full w-full p-2" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="Default School Logo" role="img"><g><path d="M50 5 L10 20 V60 C10 85, 50 95, 50 95 C50 95, 90 85, 90 60 V20 L50 5 Z" fill="#F0F4F8" stroke="#4A5568" stroke-width="3"></path><path d="M35 65 C 50 50, 65 50, 65 65 L 65 35 C 50 45, 35 45, 35 35 Z M 50 42 V 68" fill="none" stroke="#2D3748" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path></g></svg>`;
 
-            // --- UI Update Functions ---
+            // ===== 요소 =====
+            const $ = (id) => document.getElementById(id);
+            const mainApp = $('main-app');
+            const printPreviewContainer = $('print-preview-container');
+            const printPreviewContent = $('print-preview-content');
+            const previewInfo = $('preview-info');
+            const fileUploadContainer = $('file-upload-container');
+            const fileInput = $('file-input');
+            const fileUploadStatus = $('file-upload-status');
+            const csvFileName = $('csv-file-name');
+            const fileSummary = $('file-summary');
+            const removeCsvBtn = $('remove-csv-btn');
+            const logoUpload = $('logo-upload');
+            const logoPreviewContainer = $('logo-preview-container');
+            const logoUploadControl = $('logo-upload-control');
+            const logoRemoveControl = $('logo-remove-control');
+            const removeLogoBtn = $('remove-logo-btn');
+            const studentListUl = $('student-list-ul');
+            const studentListPlaceholder = $('student-list-placeholder');
+            const searchInput = $('search-input');
+            const classFilter = $('class-filter');
+            const selectAllCheckbox = $('select-all-checkbox');
+            const selectionCount = $('selection-count');
+            const generateBtn = $('generate-btn');
+            const generateBtnText = $('generate-btn-text');
+            const academicYearSelect = $('academic-year-select');
+            const semesterSelect = $('semester-select');
+            const gradeSelect = $('grade-select');
+            const schoolNameInput = $('school-name-input');
+            const errorContainer = $('error-message-container');
+            const errorMessage = $('error-message');
+
+            $('current-year').textContent = new Date().getFullYear();
+            academicYearSelect.value = new Date().getFullYear();
+            logoPreviewContainer.innerHTML = `<img src="원묵고_원로고.png" class="h-full w-full object-contain p-1" alt="기본 학교 로고" onerror="this.parentElement.innerHTML = DEFAULT_LOGO_SVG_FALLBACK">`;
+            window.DEFAULT_LOGO_SVG_FALLBACK = DEFAULT_LOGO_SVG;
+
+            // ===== 유틸 =====
+            const norm = (v) => (v === null || v === undefined) ? '' : String(v).trim();
+            const showError = (msg) => { errorMessage.textContent = msg; errorContainer.classList.remove('hidden'); };
+            const hideError = () => errorContainer.classList.add('hidden');
+            const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+            // ===== 파싱 =====
+            // 학생 데이터가 아닌 관리용 열 이름 (정확히 일치할 때만 제외)
+            const META_COLS = new Set(['순번', '학번', '이름', '과학', '성적', '성별', '그룹', '반배정', '교사', '교실', '비고', '합계', '대기자']);
+
+            /**
+             * 행 배열(array of arrays)을 학생 데이터로 변환.
+             * 지원 형식:
+             *  1) 단순 형식: [학번, 이름, 과목1, 과목2, ...] (순번 열 유무 무관)
+             *  2) 배정 원본 형식: 1행에 순번/학번/이름/…/교사/교실 + 병합된 과목 밴드,
+             *     2행에 실제 과목명이 오는 2행 헤더. 학생 행 뒤 집계 행은 자동 제외.
+             */
+            const processRows = (rows) => {
+                if (!rows || rows.length === 0) throw new Error('파일에 데이터가 없습니다.');
+
+                // 헤더 행 탐색: '학번'과 '이름'이 함께 있는 첫 행
+                let headerIdx = -1;
+                for (let i = 0; i < Math.min(rows.length, 15); i++) {
+                    const r = (rows[i] || []).map(norm);
+                    if (r.includes('학번') && r.includes('이름')) { headerIdx = i; break; }
+                }
+                if (headerIdx === -1) throw new Error("'학번'과 '이름' 열을 찾을 수 없습니다. 파일 형식을 확인해 주세요.");
+
+                const h1 = (rows[headerIdx] || []).map(norm);
+                const idCol = h1.indexOf('학번');
+                const nameCol = h1.indexOf('이름');
+                const next = (rows[headerIdx + 1] || []).map(norm);
+
+                // 2행 헤더 감지: 다음 행의 학번/이름 칸이 비어 있고 다른 칸에 텍스트(과목명)가 있으면 헤더의 연속
+                const isTwoRow = next.length > 0 && !next[idCol] && !next[nameCol] && next.some(v => v !== '');
+                const colCount = Math.max(h1.length, isTwoRow ? next.length : 0);
+
+                const headers = [];
+                for (let c = 0; c < colCount; c++) {
+                    headers[c] = (isTwoRow && next[c]) ? next[c] : (h1[c] || '');
+                }
+                const dataStart = headerIdx + (isTwoRow ? 2 : 1);
+
+                // 과목 열 = 메타 열이 아니고 이름이 있는 열
+                const subjectCols = [];
+                headers.forEach((name, c) => {
+                    if (c === idCol || c === nameCol) return;
+                    if (!name || META_COLS.has(name)) return;
+                    // 2행 헤더에서 과목명이 채워지지 않은 밴드 제목(예: '2학기[택5]', '선택과목(3)')은 제외
+                    if (isTwoRow && !next[c]) return;
+                    subjectCols.push({ c, name });
+                });
+                if (subjectCols.length === 0) throw new Error('과목 열을 찾을 수 없습니다. 파일 형식을 확인해 주세요.');
+
+                const parsed = [];
+                for (let i = dataStart; i < rows.length; i++) {
+                    const r = (rows[i] || []).map(norm);
+                    const id = r[idCol];
+                    const name = r[nameCol];
+                    // 학번(숫자 포함)과 이름이 모두 있는 행만 학생으로 인정 → 뒤쪽 집계 행 자동 제외
+                    if (!id || !name || !/\d/.test(id)) continue;
+                    const subjects = {};
+                    let count = 0;
+                    subjectCols.forEach(({ c, name: sn }) => {
+                        const v = r[c] || '';
+                        subjects[sn] = v;
+                        if (v) count++;
+                    });
+                    parsed.push({
+                        id, name,
+                        cls: id.length >= 5 ? String(parseInt(id.slice(1, 3), 10)) : '',
+                        subjects, count
+                    });
+                }
+                if (parsed.length === 0) throw new Error('파일에서 유효한 학생 데이터를 찾을 수 없습니다.');
+
+                // 학번순 정렬 (원본은 그룹순으로 섞여 있음)
+                parsed.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+                return { students: parsed, subjectNames: subjectCols.map(s => s.name) };
+            };
+
+            const applyData = (result, fileName) => {
+                students = result.students;
+                subjectNames = result.subjectNames;
+                selectedStudents.clear();
+                lastSelectedIndex = null;
+
+                // 학년 자동 감지 (학번 첫 자리)
+                const g = students[0].id[0];
+                if (['1', '2', '3'].includes(g)) gradeSelect.value = `${g}학년`;
+
+                // 파일명에서 학년도/학기 자동 감지
+                const ym = fileName.match(/(20\d{2})/);
+                if (ym) academicYearSelect.value = ym[1];
+                const sm = fileName.match(/([12])\s*학기/);
+                if (sm) semesterSelect.value = `${sm[1]}학기`;
+
+                // 반 필터 구성
+                const classes = [...new Set(students.map(s => s.cls).filter(Boolean))]
+                    .sort((a, b) => Number(a) - Number(b));
+                classFilter.innerHTML = '<option value="">전체 반</option>' +
+                    classes.map(c => `<option value="${c}">${c}반</option>`).join('');
+
+                fileSummary.textContent = `학생 ${students.length}명 · 과목 ${subjectNames.length}개`;
+                updateStudentList();
+            };
+
+            // ===== UI 갱신 =====
+            const getFiltered = () => {
+                const query = searchInput.value.toLowerCase();
+                const cls = classFilter.value;
+                return students.filter(s =>
+                    (s.name.toLowerCase().includes(query) || s.id.includes(query)) &&
+                    (!cls || s.cls === cls)
+                );
+            };
+
             const updateStudentList = () => {
                 studentListUl.innerHTML = '';
-                const query = searchInput.value.toLowerCase();
-                
-                const filteredStudents = students.filter(s => 
-                    (s['이름']?.toLowerCase() || '').includes(query) || 
-                    (s['학번'] || '').includes(query)
-                );
+                const filtered = getFiltered();
 
                 if (students.length === 0) {
-                    studentListPlaceholder.textContent = '파일을 업로드하면 학생 목록이 표시됩니다.';
                     studentListPlaceholder.classList.remove('hidden');
-                } else if (filteredStudents.length === 0) {
-                    studentListPlaceholder.textContent = '검색된 학생이 없습니다.';
+                    studentListPlaceholder.querySelector('span').textContent = '파일을 업로드하면 학생 목록이 표시됩니다.';
+                } else if (filtered.length === 0) {
                     studentListPlaceholder.classList.remove('hidden');
+                    studentListPlaceholder.querySelector('span').textContent = '검색된 학생이 없습니다.';
                 } else {
                     studentListPlaceholder.classList.add('hidden');
-                    filteredStudents.forEach((student, index) => {
+                    filtered.forEach((student) => {
+                        const selected = selectedStudents.has(student.id);
                         const li = document.createElement('li');
-                        li.className = `p-3 text-sm text-gray-800 cursor-pointer select-none transition-colors duration-100 ${selectedStudents.has(student['학번']) ? 'bg-green-200 font-semibold text-green-900' : 'hover:bg-gray-100'}`;
-                        li.textContent = `${student['학번']} ${student['이름']}`;
-                        li.dataset.id = student['학번'];
-                        li.dataset.originalIndex = students.findIndex(s => s['학번'] === student['학번']);
+                        li.className = `student-item flex items-center gap-3 px-4 py-2.5 text-sm cursor-pointer select-none transition-colors duration-100 hover:bg-slate-50 ${selected ? 'selected' : ''}`;
+                        li.innerHTML = `
+                            <span class="check-box flex-none w-4.5 h-4.5 w-[18px] h-[18px] rounded border-2 border-slate-300 bg-white flex items-center justify-center transition-colors">
+                                <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                            </span>
+                            <span class="font-mono text-xs text-slate-400 tabular-nums">${escapeHtml(student.id)}</span>
+                            <span class="font-medium text-slate-800">${escapeHtml(student.name)}</span>
+                            <span class="ml-auto text-xs text-slate-400">${student.count}과목</span>`;
+                        li.dataset.id = student.id;
+                        li.dataset.originalIndex = students.indexOf(student);
                         li.addEventListener('click', (e) => handleStudentClick(e, li));
                         studentListUl.appendChild(li);
                     });
@@ -231,12 +495,12 @@
                 updateSelectionCount();
                 updateSelectAllCheckbox();
             };
-            
+
             const updateSelectionCount = () => {
                 selectionCount.textContent = `${selectedStudents.size} / ${students.length} 선택됨`;
                 if (selectedStudents.size > 0) {
                     generateBtn.disabled = false;
-                    generateBtnText.textContent = `${selectedStudents.size}명의 확인서 인쇄하기`;
+                    generateBtnText.textContent = `${selectedStudents.size}명의 확인서 만들기 →`;
                 } else {
                     generateBtn.disabled = true;
                     generateBtnText.textContent = '학생을 선택하세요';
@@ -254,51 +518,43 @@
                 selectAllCheckbox.checked = filteredIds.every(id => selectedStudents.has(id));
             };
 
-            const showError = (message) => {
-                errorMessage.textContent = message;
-                errorContainer.classList.remove('hidden');
-            };
-
-            const hideError = () => {
-                errorContainer.classList.add('hidden');
-            };
-
-            // --- Event Handlers ---
-            fileUploadContainer.addEventListener('click', () => fileInput.click());
+            // ===== 이벤트 =====
+            fileUploadContainer.addEventListener('click', (e) => {
+                if (e.target.closest('#remove-csv-btn')) return;
+                fileInput.click();
+            });
             fileUploadContainer.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                fileUploadContainer.classList.add('border-blue-500', 'bg-blue-50');
+                fileUploadContainer.classList.add('border-blue-500', 'bg-blue-50/60');
             });
             fileUploadContainer.addEventListener('dragleave', (e) => {
                 e.preventDefault();
-                fileUploadContainer.classList.remove('border-blue-500', 'bg-blue-50');
+                fileUploadContainer.classList.remove('border-blue-500', 'bg-blue-50/60');
             });
             fileUploadContainer.addEventListener('drop', (e) => {
                 e.preventDefault();
-                fileUploadContainer.classList.remove('border-blue-500', 'bg-blue-50');
-                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    handleFile(e.dataTransfer.files[0]);
-                }
+                fileUploadContainer.classList.remove('border-blue-500', 'bg-blue-50/60');
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
             });
             fileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files[0]) {
-                    handleFile(e.target.files[0]);
-                }
+                if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
             });
-            
+
             removeCsvBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                csvFile = null;
                 students = [];
+                subjectNames = [];
                 selectedStudents.clear();
                 fileInput.value = '';
                 fileUploadStatus.classList.add('hidden');
+                classFilter.innerHTML = '<option value="">전체 반</option>';
+                hideError();
                 updateStudentList();
             });
 
             logoUpload.addEventListener('change', (e) => {
                 const file = e.target.files[0];
-                if (file && file.size < 1024 * 1024) { // 1MB limit
+                if (file && file.size < 1024 * 1024) {
                     const reader = new FileReader();
                     reader.onloadend = () => {
                         logoSrc = reader.result;
@@ -315,23 +571,21 @@
             removeLogoBtn.addEventListener('click', () => {
                 logoSrc = null;
                 logoUpload.value = '';
-                logoPreviewContainer.innerHTML = `<svg class="h-20 w-20" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="Default School Logo" role="img"><g><path d="M50 5 L10 20 V60 C10 85, 50 95, 50 95 C50 95, 90 85, 90 60 V20 L50 5 Z" fill="#F0F4F8" stroke="#4A5568" stroke-width="3"></path><path d="M35 65 C 50 50, 65 50, 65 65 L 65 35 C 50 45, 35 45, 35 35 Z M 50 42 V 68" fill="none" stroke="#2D3748" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path></g></svg>`;
+                logoPreviewContainer.innerHTML = `<img src="원묵고_원로고.png" class="h-full w-full object-contain p-1" alt="기본 학교 로고" onerror="this.parentElement.innerHTML = DEFAULT_LOGO_SVG_FALLBACK">`;
                 logoUploadControl.classList.remove('hidden');
                 logoRemoveControl.classList.add('hidden');
             });
 
             searchInput.addEventListener('input', updateStudentList);
+            classFilter.addEventListener('change', updateStudentList);
 
             selectAllCheckbox.addEventListener('change', (e) => {
                 const filteredIds = Array.from(studentListUl.children).map(li => li.dataset.id);
-                if (e.target.checked) {
-                    filteredIds.forEach(id => selectedStudents.add(id));
-                } else {
-                    filteredIds.forEach(id => selectedStudents.delete(id));
-                }
+                if (e.target.checked) filteredIds.forEach(id => selectedStudents.add(id));
+                else filteredIds.forEach(id => selectedStudents.delete(id));
                 updateStudentList();
             });
-            
+
             function handleStudentClick(e, li) {
                 const clickedId = li.dataset.id;
                 const clickedIndex = parseInt(li.dataset.originalIndex, 10);
@@ -339,285 +593,172 @@
                 if (e.shiftKey && lastSelectedIndex !== null) {
                     const start = Math.min(lastSelectedIndex, clickedIndex);
                     const end = Math.max(lastSelectedIndex, clickedIndex);
-                    const newSelection = new Set();
-                    for (let i = start; i <= end; i++) {
-                        newSelection.add(students[i]['학번']);
-                    }
-                    selectedStudents = newSelection;
-                } else if (e.ctrlKey || e.metaKey) {
-                    if (selectedStudents.has(clickedId)) {
-                        selectedStudents.delete(clickedId);
-                    } else {
-                        selectedStudents.add(clickedId);
-                    }
-                    lastSelectedIndex = clickedIndex;
+                    for (let i = start; i <= end; i++) selectedStudents.add(students[i].id);
                 } else {
-                    selectedStudents.clear();
-                    selectedStudents.add(clickedId);
+                    // 클릭 = 토글 (여러 명을 이어서 선택하기 쉬움)
+                    if (selectedStudents.has(clickedId)) selectedStudents.delete(clickedId);
+                    else selectedStudents.add(clickedId);
                     lastSelectedIndex = clickedIndex;
                 }
                 updateStudentList();
             }
-            
+
             generateBtn.addEventListener('click', () => {
-                if (selectedStudents.size > 0) {
-                    generatePrintPreview();
-                    mainApp.classList.add('hidden');
-                    printPreviewContainer.classList.remove('hidden');
-                }
+                if (selectedStudents.size === 0) return;
+                generatePrintPreview();
+                mainApp.classList.add('hidden');
+                printPreviewContainer.classList.remove('hidden');
+                window.scrollTo(0, 0);
             });
 
-            backToMainBtn.addEventListener('click', () => {
+            $('back-to-main-btn').addEventListener('click', () => {
                 mainApp.classList.remove('hidden');
                 printPreviewContainer.classList.add('hidden');
                 printPreviewContent.innerHTML = '';
             });
 
-            printBtn.addEventListener('click', () => {
-                window.print();
-            });
+            $('print-btn').addEventListener('click', () => window.print());
 
-            // --- Core Logic ---
+            // ===== 파일 처리 =====
             const handleFile = (file) => {
                 const extension = file.name.split('.').pop()?.toLowerCase();
-                
-                if (extension === 'csv') {
-                    csvFile = file;
-                    csvFileName.textContent = file.name;
-                    fileUploadStatus.classList.remove('hidden');
-                    parseCsv(file);
-                } else if (extension === 'xlsx') {
-                    csvFile = file;
-                    csvFileName.textContent = file.name;
-                    fileUploadStatus.classList.remove('hidden');
-                    parseExcel(file);
-                } else {
-                    alert('CSV 또는 Excel 파일만 업로드할 수 있습니다.');
+                if (extension !== 'csv' && extension !== 'xlsx') {
+                    alert('CSV 또는 Excel(.xlsx) 파일만 업로드할 수 있습니다.');
                     return;
                 }
+                csvFileName.textContent = file.name;
+                fileSummary.textContent = '파일을 읽는 중...';
+                fileUploadStatus.classList.remove('hidden');
+                hideError();
+                if (extension === 'csv') parseCsv(file);
+                else parseExcel(file);
+            };
+
+            const onParseError = (err) => {
+                students = [];
+                subjectNames = [];
+                selectedStudents.clear();
+                fileSummary.textContent = '파일을 읽지 못했습니다.';
+                updateStudentList();
+                showError(err.message || String(err));
             };
 
             const parseExcel = (file) => {
-                studentListPlaceholder.textContent = 'Excel 파일을 파싱 중입니다...';
-                hideError();
-
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
-                        const data = e.target.result;
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                        
-                        // Convert sheet to JSON
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                        
-                        if (jsonData.length === 0) {
-                            throw new Error('Excel 파일에 데이터가 없습니다.');
+                        const workbook = XLSX.read(e.target.result, { type: 'array' });
+                        // '배정내역' 등 배정 시트를 우선 시도하고, 실패하면 나머지 시트를 순서대로 시도
+                        const sheetNames = [...workbook.SheetNames].sort((a, b) =>
+                            (b.includes('배정') ? 1 : 0) - (a.includes('배정') ? 1 : 0));
+                        let lastErr = new Error('학생 데이터를 담은 시트를 찾을 수 없습니다.');
+                        for (const sn of sheetNames) {
+                            try {
+                                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sn], { header: 1, defval: null });
+                                const result = processRows(rows);
+                                applyData(result, file.name);
+                                return;
+                            } catch (err) { lastErr = err; }
                         }
-
-                        // First row is header
-                        const headers = jsonData[0];
-                        if (!headers.includes('학번') || !headers.includes('이름')) {
-                            throw new Error("Excel 파일에 '학번'과 '이름' 열이 없습니다.");
-                        }
-
-                        // Convert to array of objects with all values as strings
-                        const results = [];
-                        for (let i = 1; i < jsonData.length; i++) {
-                            const row = jsonData[i];
-                            const obj = {};
-                            headers.forEach((header, index) => {
-                                // Convert all values to string to match CSV behavior
-                                const value = row[index];
-                                obj[header] = value === null || value === undefined ? '' : String(value).trim();
-                            });
-                            results.push(obj);
-                        }
-
-                        students = results.filter(s => s['학번'] && s['이름']);
-                        
-                        if (students.length === 0) {
-                            throw new Error("파일에서 유효한 학생 데이터를 찾을 수 없습니다.");
-                        }
-
-                        selectedStudents.clear();
-                        updateStudentList();
-                    } catch (err) {
-                        students = [];
-                        selectedStudents.clear();
-                        updateStudentList();
-                        showError(err.message);
-                    }
+                        throw lastErr;
+                    } catch (err) { onParseError(err); }
                 };
-
-                reader.onerror = () => {
-                    showError('파일을 읽을 수 없습니다.');
-                    students = [];
-                    selectedStudents.clear();
-                    updateStudentList();
-                };
-
+                reader.onerror = () => onParseError(new Error('파일을 읽을 수 없습니다.'));
                 reader.readAsArrayBuffer(file);
             };
 
             const parseCsv = (file) => {
-                studentListPlaceholder.textContent = 'CSV 파일을 파싱 중입니다...';
-                hideError();
-
-                const parsePromise = (config) => new Promise(resolve => {
+                const parseWith = (encoding) => new Promise((resolve, reject) => {
                     Papa.parse(file, {
-                        header: true,
-                        skipEmptyLines: true,
-                        ...config,
-                        complete: resolve,
-                        error: (err) => resolve({ papaparse_error: true, error: err }),
+                        header: false,
+                        skipEmptyLines: 'greedy',
+                        encoding,
+                        complete: (res) => resolve(res.data),
+                        error: reject,
                     });
                 });
-                
-                const cleanBomData = (results) => {
-                    if (!results.data || !results.data.length || !results.meta.fields.length) return results;
-                    const firstHeader = results.meta.fields[0];
-                    if (firstHeader && firstHeader.startsWith('﻿')) {
-                        const newFields = results.meta.fields.map((field, index) => index === 0 ? field.replace(/^﻿/, '') : field);
-                        const newData = results.data.map((row) => {
-                            const newRow = {};
-                            for (const oldKey in row) {
-                                newRow[oldKey.replace(/^﻿/, '')] = row[oldKey];
-                            }
-                            return newRow;
-                        });
-                        return { ...results, data: newData, meta: { ...results.meta, fields: newFields } };
-                    }
-                    return results;
-                };
-
-                const hasRequiredColumns = (results) => {
-                    if (!results?.meta?.fields) return false;
-                    return ['학번', '이름'].every(col => results.meta.fields.includes(col));
-                };
-
-                parsePromise({}).then(resultsUTF8 => {
-                    let finalResults = cleanBomData(resultsUTF8);
-
-                    if (finalResults.papaparse_error || !hasRequiredColumns(finalResults)) {
-                        console.warn("UTF-8 파싱 실패 또는 필수 열 누락. EUC-KR로 재시도합니다.");
-                        return parsePromise({ encoding: 'EUC-KR' }).then(cleanBomData);
-                    }
-                    return finalResults;
-                }).then(finalResults => {
-                    if (finalResults.papaparse_error || !hasRequiredColumns(finalResults)) {
-                        throw new Error("CSV 파싱에 실패했습니다. 파일이 UTF-8 또는 EUC-KR로 인코딩되었는지, '학번'과 '이름' 열이 있는지 확인하세요.");
-                    }
-                    
-                    students = finalResults.data.filter(s => s['학번'] && s['이름']);
-                    if (students.length === 0) {
-                        throw new Error("파일에서 유효한 학생 데이터를 찾을 수 없습니다.");
-                    }
-                    
-                    selectedStudents.clear();
-                    updateStudentList();
-                }).catch(err => {
-                    students = [];
-                    selectedStudents.clear();
-                    updateStudentList();
-                    showError(err.message);
-                });
+                parseWith('UTF-8')
+                    .then(rows => processRows(rows))
+                    .catch(() => parseWith('EUC-KR').then(rows => processRows(rows)))
+                    .then(result => { if (result) applyData(result, file.name); })
+                    .catch(() => onParseError(new Error("CSV 파싱에 실패했습니다. 파일이 UTF-8 또는 EUC-KR로 인코딩되었는지, '학번'과 '이름' 열이 있는지 확인하세요.")));
             };
-            
+
+            // ===== 확인서 생성 =====
             const generateConfirmationHTML = (student) => {
-                const studentId = student['학번'];
-                const studentName = student['이름'];
-                const academicYear = academicYearSelect.value;
+                const year = academicYearSelect.value;
+                const semester = semesterSelect.value;
                 const grade = gradeSelect.value;
-                
-                const allPossibleSubjects = Object.keys(student).filter(h => h && h.trim() !== '' && !['학번', '이름'].includes(h.trim()));
-                const totalSubjects = allPossibleSubjects.length;
+                const schoolName = schoolNameInput.value.trim() || '원묵고등학교';
 
-                // 모든 스타일 관련 변수를 여기에 선언합니다.
-                let containerPadding, headerTextSize, studentInfoTextSize, tableTextSize, cellPaddingClass, cellPaddingStyle, checkmarkTextSize, logoHeight, footerMargin, headerMargin, studentInfoMargin;
+                const n = subjectNames.length;
+                // 표에 쓸 수 있는 높이(약 180mm)를 행 수로 나눠 글자 크기를 정함
+                // → 과목이 아무리 많아도 표가 한 페이지를 넘지 않음 (행 높이는 자동 균등 분배)
+                const rowHeightMm = 180 / (n + 1);
+                const fontPt = Math.max(7.5, Math.min(11, (rowHeightMm - 1.8) * 2.1));
+                // 과목이 적을 때 표가 과도하게 늘어나지 않도록 행 높이 상한 설정
+                const maxTableHeightMm = (n + 1) * 13;
 
-                if (totalSubjects <= 22) {
-                    // 기본 스타일
-                    containerPadding = 'p-8 sm:p-12'; headerTextSize = 'text-3xl sm:text-4xl'; studentInfoTextSize = 'text-xl sm:text-2xl'; tableTextSize = 'text-base'; cellPaddingClass = 'px-2'; cellPaddingStyle = 'padding-top: 0.95rem; padding-bottom: 0.95rem;'; checkmarkTextSize = 'text-lg'; logoHeight = 'h-8'; footerMargin = 'mt-12'; headerMargin = 'mb-12'; studentInfoMargin = 'mb-10';
-                    if (totalSubjects <= 22) {
-                    // 기본 스타일 -> 압축 스타일로 변경
-                    containerPadding = 'p-4';
-                    headerTextSize = 'text-3xl';
-                    studentInfoTextSize = 'text-2xl';
-                    tableTextSize = 'text-base';
-                    cellPaddingClass = 'px-1';
-                    cellPaddingStyle = 'padding-top: 0.85rem; padding-bottom: 0.85rem;'; // 셀 여백을 줄임
-                    checkmarkTextSize = 'text-base';
-                    logoHeight = 'h-6';
-                    footerMargin = 'mt-1'; // 상하 여백을 줄임
-                    headerMargin = 'mb-4'; // 상하 여백을 줄임
-                    studentInfoMargin = 'mb-2'; // 상하 여백을 줄임
-                }
-                } else if (totalSubjects <= 30) {
-                    // 중간 스타일
-                    containerPadding = 'p-6 sm:p-8'; headerTextSize = 'text-2xl sm:text-3xl'; studentInfoTextSize = 'text-lg sm:text-xl'; tableTextSize = 'text-sm'; cellPaddingClass = 'px-2'; cellPaddingStyle = 'padding-top: 0.24rem; padding-bottom: 0.24rem;'; checkmarkTextSize = 'text-base'; logoHeight = 'h-7'; footerMargin = 'mt-6'; headerMargin = 'mb-10'; studentInfoMargin = 'mb-8';
-                } else {
-                    // 과목이 매우 많을 때 적용될 압축 스타일
-                    containerPadding = 'p-4';
-                    headerTextSize = 'text-2xl';
-                    studentInfoTextSize = 'text-lg';
-                    tableTextSize = 'text-xs';
-                    cellPaddingClass = 'px-1';
-                    cellPaddingStyle = 'padding-top: 0.24rem; padding-bottom: 0.24rem;';
-                    checkmarkTextSize = 'text-sm';
-                    logoHeight = 'h-6';
-                    footerMargin = 'mt-1';
-                    headerMargin = 'mb-4';
-                    studentInfoMargin = 'mb-2';
-                }
+                const rowsHTML = subjectNames.map((subject, i) => {
+                    const enrolled = !!student.subjects[subject];
+                    return `
+                        <tr class="${enrolled ? 'enrolled' : ''}">
+                            <td class="num">${i + 1}</td>
+                            <td class="subject">${escapeHtml(subject)}</td>
+                            <td>${enrolled ? '<span class="cp-check">✔</span>' : ''}</td>
+                            <td></td>
+                        </tr>`;
+                }).join('');
 
-                const subjectsHTML = allPossibleSubjects.map((subject, index) => `
-                    <tr class="${index % 2 !== 0 ? 'bg-gray-50' : ''}">
-                        <td class="text-center text-gray-800 ${cellPaddingClass}" style="${cellPaddingStyle}">${subject}</td>
-                        <td class="text-center text-gray-800 font-semibold ${checkmarkTextSize} ${cellPaddingClass}" style="${cellPaddingStyle}">${student[subject] ? '✔' : ''}</td>
-                        <td class="${cellPaddingClass}" style="${cellPaddingStyle}"></td>
-                    </tr>
-                `).join('');
-
-                const logoHTML = logoSrc 
-                    ? `<img src="${logoSrc}" alt="School Logo" class="${logoHeight} w-auto object-contain" />`
-                    : `<svg class="${logoHeight} w-auto" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><g><path d="M50 5 L10 20 V60 C10 85, 50 95, 50 95 C50 95, 90 85, 90 60 V20 L50 5 Z" fill="#F0F4F8" stroke="#4A5568" stroke-width="3"></path><path d="M35 65 C 50 50, 65 50, 65 65 L 65 35 C 50 45, 35 45, 35 35 Z M 50 42 V 68" fill="none" stroke="#2D3748" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path></g></svg>`;
+                const logoHTML = logoSrc
+                    ? `<img src="${logoSrc}" alt="School Logo" />`
+                    : `<img src="원묵고_원로고.png" alt="School Logo" onerror="this.style.display='none'" />`;
 
                 return `
-                    <div class="confirmation-page mx-auto my-4 max-w-4xl bg-white ${containerPadding} border-2 border-gray-200 rounded-lg shadow-md font-[sans-serif]">
-                        <header class="text-center ${headerMargin}">
-                            <h1 class="${headerTextSize} font-bold text-gray-800">${academicYear}학년도 ${grade} 교과서 신청 확인서</h1>
+                    <div class="confirmation-page">
+                        <div class="cp-accent"></div>
+                        <header class="cp-header">
+                            <div>
+                                <div class="cp-subtitle">${escapeHtml(year)}학년도 ${escapeHtml(semester)} · ${escapeHtml(grade)}</div>
+                                <h1 class="cp-title">교과서 신청 확인서</h1>
+                            </div>
+                            <div class="cp-student">
+                                <div class="cp-student-name">${escapeHtml(student.name)}</div>
+                                <div class="cp-student-id">학번 ${escapeHtml(student.id)}</div>
+                            </div>
                         </header>
-                        <div class="text-right ${studentInfoMargin}">
-                            <p class="${studentInfoTextSize} font-bold text-blue-800">${studentId} ${studentName}</p>
+                        <div class="cp-infobar">
+                            <span class="cp-chip">신청 과목 ${student.count}개</span>
+                            <span>아래 표에서 본인이 신청한 과목(✔)이 맞는지 확인해 주세요.</span>
                         </div>
-                        <div class="overflow-x-auto rounded-lg border border-gray-300 shadow-sm">
-                            <table class="w-full ${tableTextSize} table-fixed">
-                                <thead class="bg-blue-100">
-                                    <tr>
-                                        <th class="w-1/2 text-center font-semibold text-gray-700 tracking-wider ${cellPaddingClass}" style="${cellPaddingStyle}">선택과목</th>
-                                        <th class="w-40 text-center font-semibold text-gray-700 tracking-wider ${cellPaddingClass}" style="${cellPaddingStyle}">신청</th>
-                                        <th class="text-center font-semibold text-gray-700 tracking-wider ${cellPaddingClass}" style="${cellPaddingStyle}">비고</th>
-                                    </tr>
+                        <div class="cp-tablewrap" style="max-height:${maxTableHeightMm}mm;">
+                            <table class="cp-table" style="font-size:${fontPt}pt;">
+                                <colgroup>
+                                    <col style="width:11mm"><col><col style="width:26mm"><col style="width:38mm">
+                                </colgroup>
+                                <thead>
+                                    <tr><th>번호</th><th>선택과목</th><th>신청</th><th>비고</th></tr>
                                 </thead>
-                                <tbody class="divide-y divide-gray-200 bg-white">${subjectsHTML}</tbody>
+                                <tbody>${rowsHTML}</tbody>
                             </table>
                         </div>
-                        <footer class="${footerMargin} flex justify-end items-center">
-                            <div class="text-right leading-tight flex flex-col items-center">${logoHTML}</div>
+                        <footer class="cp-footer">
+                            <p class="cp-confirm-text">위 교과서 신청 내역이 본인의 선택과목과 일치함을 확인합니다.</p>
+                            <p class="cp-date">${escapeHtml(year)}년&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;일</p>
+                            <p class="cp-sign">학생 확인 : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (서명)</p>
+                            <div class="cp-school">
+                                ${logoHTML}
+                                <span class="cp-school-name">${escapeHtml(schoolName)}</span>
+                            </div>
                         </footer>
                     </div>`;
             };
 
             const generatePrintPreview = () => {
-                printPreviewContent.innerHTML = '';
-                const studentsToPrint = students.filter(s => selectedStudents.has(s['학번']));
-                studentsToPrint.forEach(student => {
-                    const confirmationHTML = generateConfirmationHTML(student);
-                    printPreviewContent.innerHTML += confirmationHTML;
-                });
+                const toPrint = students.filter(s => selectedStudents.has(s.id));
+                printPreviewContent.innerHTML = toPrint.map(generateConfirmationHTML).join('');
+                previewInfo.textContent = `${toPrint.length}명 · ${toPrint.length}페이지 (A4)`;
             };
-
         });
     </script>
 </body>
